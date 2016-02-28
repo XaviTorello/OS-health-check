@@ -2,8 +2,6 @@
 
 import paramiko
 
-
-
 class Connection ():
     """ Connection object
     """
@@ -52,15 +50,46 @@ class Connection ():
 
 
 
+class Check():
+
+    def __init__(self, connection, checklist):
+        self.connection = connection
+        self.trigger_checks(checklist)
+        self.check_proc()
+
+    def trigger_checks(self, checks):
+        for check in checks:
+            print check
+
+
+    def execute_check(self):
+        self.connection.launch_command(self.command)
+
+    def check_proc (self):
+        self.command="cat /proc/cpuinfo"
+        self.execute_check()
+        print self.connection.print_last_command()
+
+
+
+
+
+
+
+
 user="user"
 password="password"
 host="localhost"
 
-local = Connection(host, user, password)
+#local = Connection(host, user, password)
+local = Connection(host, "gisce", "k")
 
-command = local.launch_command("cat /proc/cpuinfo")
+cpu = Check(local, ["cpu", "disk"])
 
-local.print_last_command()
+
+
+
+#local.print_last_command()
 
 local.close_connection()
 
