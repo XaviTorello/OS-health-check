@@ -2,7 +2,6 @@
 
 import paramiko
 
-
 class Connection ():
     """ Connection object
     """
@@ -73,4 +72,24 @@ class Check():
 
 
 
+
+
+
+
+
+user="user"
+password="password"
+host="localhost"
+
+#local = Connection(host, user, password)
+local = Connection(host, "gisce", "k")
+
+cpu = Check(local, ["cpu", "disk"])
+
+
+
+
+#local.print_last_command()
+
+local.close_connection()
 
