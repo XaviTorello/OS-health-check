@@ -13,7 +13,7 @@ host="host"
 #local = Connection(host, user, password)
 local = Connection(host, "gisce", "k")
 
-cpu = Check(local, ["disk", "swap"])
+cpu = Check(local, ["disk", "swap", "cpu"])
 
 
 
