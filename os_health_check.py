@@ -1,6 +1,11 @@
 #/usr/bin/python
-
+from __future__ import division
 import paramiko
+
+
+import logging
+logger = logging.getLogger(__name__)
+
 
 class Connection ():
     """ Connection object
@@ -112,9 +117,56 @@ class Check():
             elif int(entrada[4])>=int(self.warning):
                 self.estat = 'w'
 
+            missatge="[{}] Disk {} is {}% used\n".format(self.estats[self.estat], entrada[0],entrada[4])
+
+            logger.info(missatge)
+
             if self.estat != 'o':
-                self.sortida+= "{}! - Disk {} {}% used\n".format(self.estats[self.estat], entrada[0],entrada[4])
+                self.sortida+=missatge
                 self.rc=max(int(self.rc), int(self.estats_rc[self.estat]))
 
 
 
+    def check_swap (self):
+        self.command="cat /proc/meminfo | grep Swap"
+        self.execute_check()
+        #print self.connection.print_last_command()
+
+        self.estat='o'
+        self.sortida=''
+        self.rc=self.estats_rc['o']
+
+        swapFree=0
+        swapTotal=0
+        swapUsed=0
+
+        for linia in self.connection.last_command[2]:
+            entrada=linia.split()
+
+            if "SwapTotal" in entrada[0]:
+                swapTotal = int(entrada[1])
+                logger.debug("Swap total: {}{}".format(swapTotal, entrada[2]))
+
+            if "SwapFree" in entrada[0]:
+                swapFree = int(entrada[1])
+                logger.debug("Swap free: {}{}".format(swapFree, entrada[2]))
+
+        if swapFree and swapTotal>0:
+            swapUsed=100-(swapFree*100/swapTotal)
+            logger.debug("Swap used: {}%".format(swapUsed))
+            print swapUsed
+
+
+
+        self.estat='o'
+
+        if swapUsed>=int(self.critical):
+            self.estat = 'c'
+        elif swapUsed>=int(self.warning):
+            self.estat = 'w'
+
+        logger.info("- [{}] Swap is {}% used\n".format(self.estats[self.estat], swapUsed))
+
+        if self.estat != 'o':
+            self.sortida+= "{}! - Swap is {}% used\n".format(self.estats[self.estat], swapUsed)
+            self.rc=max(int(self.rc), int(self.estats_rc[self.estat]))
