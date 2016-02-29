@@ -86,10 +86,55 @@ class Check():
         self.connection.launch_command(self.command)
 
 
+
     def check_cpu (self):
-        self.command="cat /proc/cpuinfo"
+        self.command="cat /proc/loadavg"
         self.execute_check()
-        print self.connection.print_last_command()
+        #print self.connection.print_last_command()
+
+        self.estat='o'
+        self.sortida=''
+        self.rc=self.estats_rc['o']
+
+        avg1 = 0.0
+        avg5 = 0.0
+        avg15 = 0.0
+
+        processes = 0
+        total_processes = 0
+        last_pid = 0
+
+        for linia in self.connection.last_command[2]:
+            entrada=linia.split()
+
+            #print entrada[0]
+            avg1, avg5, avg15 = entrada[0], entrada[1],entrada[2]
+
+            processes,total_processes = entrada[3].split("/")
+            last_pid=entrada[4]
+
+            logger.info("Load average is {}, {}, {}".format(avg1, avg5, avg15))
+            logger.info("Processes: {} of {}. Last PID: {}".format(processes, total_processes, last_pid))
+
+
+        self.estat='o'
+
+
+        if float(avg5)>float(0.9):
+            self.estat='c'
+            logger.info("- [{}] Load average is {} for the last 5min\n".format(self.estats[self.estat], avg5))
+
+        elif float(avg5)>float(0.7):
+            self.estat='w'
+            logger.info("- [{}] Load average is {} for the last 5min\n".format(self.estats[self.estat], avg5))
+
+
+
+        if self.estat != 'o':
+            self.rc=max(int(self.rc), int(self.estats_rc[self.estat]))
+            self.sortida+= "{} Load average is {}, {}, {}".format(self.estat, avg1, avg5, avg15)
+
+
 
 
     def check_disk (self):
@@ -165,8 +210,9 @@ class Check():
         elif swapUsed>=int(self.warning):
             self.estat = 'w'
 
-        logger.info("- [{}] Swap is {}% used\n".format(self.estats[self.estat], swapUsed))
+        missatge="- [{}] Swap is {}% used\n".format(self.estats[self.estat], swapUsed)
+        logger.info(missatge)
 
         if self.estat != 'o':
-            self.sortida+= "{}! - Swap is {}% used\n".format(self.estats[self.estat], swapUsed)
+            self.sortida+= missatge
             self.rc=max(int(self.rc), int(self.estats_rc[self.estat]))
