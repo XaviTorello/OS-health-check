@@ -6,12 +6,12 @@ from os_health_check import Connection, Check
 
 user="user"
 password="password"
-host="localhost"
+host="host"
 
 #local = Connection(host, user, password)
 local = Connection(host, "gisce", "k")
 
-cpu = Check(local, ["disk", "swap"])
+cpu = Check(local, ["disk"])
 
 
 

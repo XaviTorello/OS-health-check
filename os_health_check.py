@@ -118,5 +118,3 @@ class Check():
 
 
 
-
-import go
