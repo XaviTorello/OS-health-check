@@ -25,8 +25,7 @@ class Connection ():
 
         self.client = paramiko.SSHClient()
         self.client.load_system_host_keys()
-        self.client.set_missing_host_key_policy(paramiko.WarningPolicy())
-
+	self.client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
         self.client.connect(host, port=port, username=user, password=passwd)
 
@@ -123,9 +122,9 @@ class Check():
         #logger.info("Load average is {}, {}, {}".format(avg1, avg5, avg15))
 
 
-        if self.estat != 'o':
-            self.rc=max(int(self.rc), int(self.estats_rc[self.estat]))
-            self.sortida+= missatge
+        #if self.estat != 'o':
+        self.rc=max(int(self.rc), int(self.estats_rc[self.estat]))
+        self.sortida+= missatge
 
 
     def check_cpu (self, params=None):
@@ -171,9 +170,9 @@ class Check():
 
 
 
-        if self.estat != 'o':
-            self.rc=max(int(self.rc), int(self.estats_rc[self.estat]))
-            self.sortida+= "[{}] Load average is {}, {}, {}".format(self.estats[self.estat], avg1, avg5, avg15)
+        #if self.estat != 'o':
+        self.rc=max(int(self.rc), int(self.estats_rc[self.estat]))
+        self.sortida+= "[{}] Load average is {}, {}, {}".format(self.estats[self.estat], avg1, avg5, avg15)
 
 
 
@@ -207,9 +206,9 @@ class Check():
 
             logger.info(missatge)
 
-            if self.estat != 'o':
-                self.sortida+=missatge
-                self.rc=max(int(self.rc), int(self.estats_rc[self.estat]))
+            #if self.estat != 'o':
+            self.sortida+=missatge
+            self.rc=max(int(self.rc), int(self.estats_rc[self.estat]))
 
 
 
@@ -240,7 +239,6 @@ class Check():
         if swapFree and swapTotal>0:
             swapUsed=100-(swapFree*100/swapTotal)
             logger.debug("Swap used: {}%".format(swapUsed))
-            print swapUsed
 
 
 
@@ -254,6 +252,6 @@ class Check():
         missatge="- [{}] Swap is {}% used\n".format(self.estats[self.estat], swapUsed)
         logger.info(missatge)
 
-        if self.estat != 'o':
-            self.sortida+= missatge
-            self.rc=max(int(self.rc), int(self.estats_rc[self.estat]))
+        # if self.estat != 'o':
+        self.sortida+= missatge
+        self.rc=max(int(self.rc), int(self.estats_rc[self.estat]))

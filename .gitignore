@@ -1,0 +1,9 @@
+.idea
+*.pyc
+*.swp
+*.swo
+a.py*
+test.py
+build/*
+*egg-info*
+setup.cfg
