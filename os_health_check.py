@@ -74,11 +74,14 @@ class Check():
 
     def trigger_checks(self, checks):
         for check in checks:
-            quin_check="check_"+check
-            print "Executing {}:\n".format(quin_check)
+            execucio=check.split(" ")
+            logger.debug("Triggering {}".format(execucio))
+
+            quin_check="check_"+execucio[0]
+            logger.debug("Executing {}:".format(quin_check))
             control = getattr(Check, quin_check)
-            control(self)
-            print "Command {} status: {}".format(self.command, self.rc)
+            control(self, execucio)
+            logger.debug("Command {} status: {}".format(self.command, self.rc))
             print self.sortida
 
 
@@ -86,8 +89,46 @@ class Check():
         self.connection.launch_command(self.command)
 
 
+    def check_process_grep_count (self, params=None):
+        process_exp = str(params[1])
+        count_expected = int(params[2])
 
-    def check_cpu (self):
+        self.command="pgrep -fc {}".format(process_exp)
+        self.execute_check()
+        #print self.connection.print_last_command()
+
+        self.estat='o'
+        self.sortida=''
+        self.rc=self.estats_rc['o']
+
+        for linia in self.connection.last_command[2]:
+            count=int(linia.split()[0])
+
+        def compare(x):
+            return {
+                count_expected: 'o',
+                0: 'c',
+            }.get(x,'u')
+
+        self.estat=compare(count)
+
+        if self.estat == 'u':  #si no es l'esperat o 0
+            if (count>count_expected):
+                self.estat='c'
+            else:
+                self.estat='w'
+
+
+        missatge = "[{}] The count of '{}' is {}. Expected count: {}".format(self.estats[self.estat], process_exp, count, count_expected)
+        #logger.info("Load average is {}, {}, {}".format(avg1, avg5, avg15))
+
+
+        if self.estat != 'o':
+            self.rc=max(int(self.rc), int(self.estats_rc[self.estat]))
+            self.sortida+= missatge
+
+
+    def check_cpu (self, params=None):
         self.command="cat /proc/loadavg"
         self.execute_check()
         #print self.connection.print_last_command()
@@ -132,12 +173,12 @@ class Check():
 
         if self.estat != 'o':
             self.rc=max(int(self.rc), int(self.estats_rc[self.estat]))
-            self.sortida+= "{} Load average is {}, {}, {}".format(self.estat, avg1, avg5, avg15)
+            self.sortida+= "[{}] Load average is {}, {}, {}".format(self.estats[self.estat], avg1, avg5, avg15)
 
 
 
 
-    def check_disk (self):
+    def check_disk (self, params=None):
         self.command="df"
         self.execute_check()
         #print self.connection.print_last_command()
@@ -172,7 +213,7 @@ class Check():
 
 
 
-    def check_swap (self):
+    def check_swap (self, params=None):
         self.command="cat /proc/meminfo | grep Swap"
         self.execute_check()
         #print self.connection.print_last_command()
