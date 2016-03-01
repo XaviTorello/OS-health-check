@@ -14,7 +14,7 @@ host="host"
 local = Connection(host, "gisce", "k")
 
 #cpu = Check(local, ["disk", "swap", "cpu"])
-control = Check(local, ["process_grep_count portal 4", "cpu"], )
+control = Check(local, ["process_grep_count portal 4"], )
 
 #local.print_last_command()
 
