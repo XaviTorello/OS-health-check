@@ -181,6 +181,15 @@ class Check():
 
 
     def check_cpu (self, params=None):
+        #get the number of cpus
+        self.command="cat /proc/cpuinfo | grep processor | wc -l"
+        self.execute_check()
+        for linia in self.connection.last_command[2]:
+            entrada=linia.split()
+            cpus=float(entrada[0])
+
+        logger.info("This OS have {} cpus.".format(int(cpus)))
+
         self.command="cat /proc/loadavg"
         self.execute_check()
         #print self.connection.print_last_command()
@@ -193,6 +202,11 @@ class Check():
         avg5 = 0.0
         avg15 = 0.0
 
+        warning_threshold = [ 0.9, 0.75, 0.5 ]
+        critical_threshold = [ 0.99, 0.8, 0.6 ]
+
+        logger.info("Warning threshold is {} (For each CPU: {})".format([x * cpus for x in warning_threshold], warning_threshold))
+        logger.info("Critical threshold is {} (For each CPU: {})".format([x * cpus for x in critical_threshold], critical_threshold))
         processes = 0
         total_processes = 0
         last_pid = 0
@@ -209,23 +223,32 @@ class Check():
             logger.info("Load average is {}, {}, {}".format(avg1, avg5, avg15))
             logger.info("Processes: {} of {}. Last PID: {}".format(processes, total_processes, last_pid))
 
-
         self.estat='o'
 
 
-        if float(avg5)>float(0.95):
-            self.estat='c'
-            logger.info("- [{}] Load average is {} for the last 5min\n".format(self.estats[self.estat], avg5))
+        avg5=15
+#    estats = {'w':'Warning', 'c':'Critical', 'o':'OK'}
+#    estats_rc = {'w':1, 'c':2, 'o':0}
+#    estat='o'
 
-        elif float(avg5)>float(0.8):
-            self.estat='w'
-            logger.info("- [{}] Load average is {} for the last 5min\n".format(self.estats[self.estat], avg5))
+        def review_threshold(actuals, warn, crit, cpu):
+            rc=0
+	    rc='o'
+            for idx, actual in enumerate(actuals):
+	        if float(actual)>float(crit[idx] * float(cpu)): #if critical return it directly!
+                    logger.info("- [{}] Load average is {} for the last {}".format(self.estats['c'], float(actual),idx))
+	            return 'c'
+	        elif float(actual)>float(crit[idx] * float(cpu)):
+	       	    rc='w'
+                logger.info("- [{}] Load average is {} for the last {}".format(self.estats[rc], float(actual),idx))
+            return rc
 
 
+        self.estat=review_threshold([avg1, avg5, avg15] , critical_threshold, warning_threshold, cpus)
 
         #if self.estat != 'o':
         self.rc=max(int(self.rc), int(self.estats_rc[self.estat]))
-        self.sortida+= "[{}] Load average is {}, {}, {}".format(self.estats[self.estat], avg1, avg5, avg15)
+        self.sortida+= "[{}] Load average is {}, {}, {} [{} cpus] (threshold {}, per cpu {})".format(self.estats[self.estat], avg1, avg5, avg15, int(cpus), [x * cpus for x in critical_threshold], critical_threshold)
 
 
 
