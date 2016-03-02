@@ -13,7 +13,6 @@ class Connection ():
     client = paramiko.SSHClient()
     last_command = []
 
-
     def __init__(self, host, user, passwd, port=22):
         self.set_new_connection(host,user,passwd, port)
 
@@ -86,6 +85,58 @@ class Check():
 
     def execute_check(self):
         self.connection.launch_command(self.command)
+
+    def check_process_listener (self, params=None):
+        tcp_port = str(params[1])
+
+        try:
+            count_expected = int(params[2])
+        except:
+            logger.info("No expected count received, setting to 1")
+            count_expected = 1
+
+        try:
+            tcp6_avoid = int(params[3])
+        except:
+            logger.info("No tcp6_avoid received, setting to True to avoid review tcp6 listeners")
+            tcp6_avoid = True
+
+        self.command="netstat -tan | grep LISTEN | grep {}".format(tcp_port)
+
+        if tcp6_avoid:
+            self.command+=" | grep -v tcp6"
+
+        self.execute_check()
+
+        count=0
+        listeners=[]
+        self.estat='o'
+        self.sortida=''
+        self.rc=self.estats_rc['o']
+
+        for linia in self.connection.last_command[2]:
+            listeners.append(str(linia.split()[3]))
+            count+=1
+
+        def compare(x):
+            return {
+                count_expected: 'o',
+                0: 'c',
+            }.get(x,'u')
+
+        self.estat=compare(count)
+
+        if self.estat == 'u':  #si no es l'esperat o 0
+            if (count<count_expected):
+                self.estat='c'
+            else:
+                self.estat='w'
+
+        missatge = "[{}] There are {} listener for port '{}' ({}). Expected count: {}".format(self.estats[self.estat], count, tcp_port, listeners, count_expected)
+
+        self.rc=max(int(self.rc), int(self.estats_rc[self.estat]))
+        self.sortida+= missatge
+
 
 
     def check_process_grep_count (self, params=None):

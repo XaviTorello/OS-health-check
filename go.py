@@ -5,43 +5,43 @@ from os_health_check import Connection, Check
 import logging
 import optparse
 
-logging.basicConfig(level=logging.DEBUG)
-
-
 
 parser = optparse.OptionParser()
 
-parser.add_option('-H', '--host',
-    dest="host",
-    help="host")
-
-parser.add_option('-c', '--check',
-    dest="check",
-    help="check name")
+parser.add_option('-H', '--host', dest="host", help="host")
+parser.add_option('-P', '--port', dest="port", help="port", default=22, type="int")
+parser.add_option('-C', '--check', dest="check", help="check name")
+parser.add_option('-l', '--user', dest="user", help="username to login")
+parser.add_option('-p', '--pass', dest="password", help="password to login")
+parser.add_option('-c', '--cert', dest="cert", help="cert to login")
+parser.add_option('-D', '--debug', dest="debug", help="activate debug messages", action="store_true")
+parser.add_option('-I', '--info', dest="info", help="activate info messages", action="store_true")
 
 options, args = parser.parse_args()
 
-host="abenergia-erp.clients.gisce.lan"
-if options.host:
-    host = options.host
+if not options.host:
+    options.host="localhost"
 
-user="monitoring"
-password="monitoring"
+if not options.user:
+    options.user="user"
+
+if not options.password:
+    options.password="password"
+
+if not options.check:
+    options.check = "process_listener 22 1"
+
+if options.info:
+    logging.basicConfig(level=logging.INFO)
+
+if options.debug:
+    logging.basicConfig(level=logging.DEBUG)
 
 
-check = "process_grep_count portal 4"
-if options.check:
-    check = options.check
+local = Connection(options.host, options.user, options.password, 22)
 
-
-
-local = Connection(host, user, password, 22)
-
-#cpu = Check(local, ["disk", "swap", "cpu"])
-#control = Check(local, ["process_grep_count portal 4"], )
-control = Check(local, [check], )
-
-#local.print_last_command()
+#cpu = Check(local, ["disk", "swap", "cpu", "process_grep_count portal 4"])
+control = Check(local, [options.check], )
 
 local.close_connection()
 
