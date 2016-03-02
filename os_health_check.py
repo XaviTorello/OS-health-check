@@ -24,9 +24,7 @@ class Connection ():
 
         self.client = paramiko.SSHClient()
         self.client.load_system_host_keys()
-	self.client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
-        self.client.connect(host, port=port, username=user, password=passwd)
+        self.client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
         ## Pending try connection except host, usr/pswd, ...
         #try:
@@ -36,6 +34,12 @@ class Connection ():
         #except:
         #    print "error"
         #    self.client.close()
+
+        try:
+            self.client.connect(host, port=port, username=user, password=passwd)
+        except:
+            print "Connection error on {}@{}:{}. Review the defined connection parameters".format(user,host,port)
+            exit()
 
 
     def launch_command(self,command):
@@ -53,22 +57,22 @@ class Connection ():
 
 
 class Check():
-    critical = "82"
+    critical = "90"
     warning = "75"
 
-    estats = {'w':'Warning', 'c':'Critical', 'o':'OK'}
-    estats_rc = {'w':1, 'c':2, 'o':0}
+    estats = {'w':'WARN', 'c':'CRIT', 'o':'OK', 'i':'INFO'}
+    estats_rc = {'w':1, 'c':2, 'o':0, 'i': 0}
     estat='o'
 
     sortida=''
 
     rc = 0
 
-
     def __init__(self, connection, checklist):
         self.connection = connection
         self.trigger_checks(checklist)
         #self.check_proc()
+
 
     def trigger_checks(self, checks):
         for check in checks:
@@ -86,7 +90,13 @@ class Check():
     def execute_check(self):
         self.connection.launch_command(self.command)
 
+
     def check_process_listener (self, params=None):
+
+        if len(params)<2:
+            print "[ERROR] {} - Provide at least the PORT to review!".format(params[0])
+            return 0
+
         tcp_port = str(params[1])
 
         try:
@@ -101,12 +111,13 @@ class Check():
             logger.info("No tcp6_avoid received, setting to True to avoid review tcp6 listeners")
             tcp6_avoid = "True"
 
+
         self.command="/bin/netstat -tan | egrep -e 'LISTEN|ESCUCH' | grep {}".format(tcp_port)
 
         if tcp6_avoid == "True":
             self.command+=" | grep -v tcp6"
 
-	logger.info("Executing: '{}'".format(self.command))
+        logger.info("Executing: '{}'".format(self.command))
         self.execute_check()
 
         count=0
@@ -141,11 +152,79 @@ class Check():
 
 
 
-    def check_process_grep_count (self, params=None):
-        process_exp = str(params[1])
-        count_expected = int(params[2])
+    def check_tcp_connections (self, params=None):
+        """
+        Review the number of tcp connections of an OS
 
-        self.command="pgrep -fc {}".format(process_exp)
+        :param params:
+         (optional) type of connection  <- todo implement!
+         (optional) count_limit
+         (optional) origin_ip / destination_ip
+
+        :return: state of the check
+        """
+
+        count_expected=None
+        if len(params)>1:
+            count_expected = int(params[1])
+
+        exp=None
+        if len(params)>2:
+            exp = "| grep {}".format(str(params[2]))
+
+        command="netstat -tpan | tail -n +2  {} | wc -l".format(exp)
+
+        self.estat='o'
+        self.sortida=''
+        self.rc=self.estats_rc['o']
+
+        count=self.check_process_generic_count(command,count_expected)
+
+        missatge = "[{}] The count of TCP connections".format(self.estats[self.estat])
+
+        if exp:
+            missatge +=" for {}".format(str(params[2]))
+
+        missatge+=" is {}".format(count)
+
+        if count_expected:
+            missatge+=". Expected count: {}".format(count_expected)
+
+        #if self.estat != 'o':
+        self.sortida+=missatge
+
+
+    def check_process_grep_count (self, params=None):
+        if len(params)<2:
+            print "[ERROR] {} :: At least provide the process name to inspect!".format(params[0])
+            return -1
+
+        process_exp = str(params[1])
+
+        command="pgrep -fc {}".format(process_exp)
+
+        count_expected=None
+        if len(params)>2:
+            count_expected = int(params[2])
+            self.estat='i'
+
+        count=self.check_process_generic_count(command,count_expected)
+
+        missatge = "[{}] The count of '{}' is {}".format(self.estats[self.estat], process_exp, count)
+
+        if count_expected:
+            missatge +=". Expected count: {}".format(count_expected)
+
+        #if self.estat != 'o':
+        self.sortida+= missatge
+
+
+
+    def check_process_generic_count (self, command, count_expected=None):
+        self.command=command
+
+        logger.info("Executing '{}'".format(command))
+
         self.execute_check()
         #print self.connection.print_last_command()
 
@@ -154,30 +233,29 @@ class Check():
         self.rc=self.estats_rc['o']
 
         for linia in self.connection.last_command[2]:
+            logger.info("Output: '{}'".format(linia.split()))
             count=int(linia.split()[0])
 
-        def compare(x):
-            return {
-                count_expected: 'o',
-                0: 'c',
-            }.get(x,'u')
+        if count_expected:
+            def compare(x):
+                return {
+                    count_expected: 'o',
+                    0: 'c',
+                }.get(x,'u')
 
-        self.estat=compare(count)
+            self.estat=compare(count)
 
-        if self.estat == 'u':  #si no es l'esperat o 0
-            if (count>count_expected):
-                self.estat='c'
-            else:
-                self.estat='w'
+            if self.estat == 'u':  #si no es l'esperat o 0
+                if (count>count_expected):
+                    self.estat='c'
+                else:
+                    self.estat='w'
+        else:  #non count_expected (informational case) just return OK
+            self.estat="i"
 
-
-        missatge = "[{}] The count of '{}' is {}. Expected count: {}".format(self.estats[self.estat], process_exp, count, count_expected)
-        #logger.info("Load average is {}, {}, {}".format(avg1, avg5, avg15))
-
-
-        #if self.estat != 'o':
         self.rc=max(int(self.rc), int(self.estats_rc[self.estat]))
-        self.sortida+= missatge
+        return count
+
 
 
     def check_cpu (self, params=None):
@@ -225,21 +303,14 @@ class Check():
 
         self.estat='o'
 
-
-        avg5=15
-#    estats = {'w':'Warning', 'c':'Critical', 'o':'OK'}
-#    estats_rc = {'w':1, 'c':2, 'o':0}
-#    estat='o'
-
         def review_threshold(actuals, warn, crit, cpu):
-            rc=0
-	    rc='o'
+            rc='o'
             for idx, actual in enumerate(actuals):
-	        if float(actual)>float(crit[idx] * float(cpu)): #if critical return it directly!
+                if float(actual)>float(crit[idx] * float(cpu)): #if critical return it directly!
                     logger.info("- [{}] Load average is {} for the last {}".format(self.estats['c'], float(actual),idx))
-	            return 'c'
-	        elif float(actual)>float(crit[idx] * float(cpu)):
-	       	    rc='w'
+                    return 'c'
+                elif float(actual)>float(crit[idx] * float(cpu)):
+                    rc='w'
                 logger.info("- [{}] Load average is {} for the last {}".format(self.estats[rc], float(actual),idx))
             return rc
 
@@ -249,8 +320,6 @@ class Check():
         #if self.estat != 'o':
         self.rc=max(int(self.rc), int(self.estats_rc[self.estat]))
         self.sortida+= "[{}] Load average is {}, {}, {} [{} cpus] (threshold {}, per cpu {})".format(self.estats[self.estat], avg1, avg5, avg15, int(cpus), [x * cpus for x in critical_threshold], critical_threshold)
-
-
 
 
     def check_disk (self, params=None):
@@ -278,7 +347,7 @@ class Check():
             elif int(entrada[4])>=int(self.warning):
                 self.estat = 'w'
 
-            missatge="[{}] Disk {} is {}% used on {}. Available: {}\n".format(self.estats[self.estat], entrada[0],entrada[4], entrada[5], entrada[3])
+            missatge="[{}] Disk '{}' is {}% used on '{}'. Available: {}".format(self.estats[self.estat], entrada[0],entrada[4], entrada[5], entrada[3])
 
             logger.info(missatge)
 
@@ -325,7 +394,7 @@ class Check():
         elif swapUsed>=int(self.warning):
             self.estat = 'w'
 
-        missatge="- [{}] Swap is {}% used\n".format(self.estats[self.estat], swapUsed)
+        missatge="[{}] Swap is {}% used".format(self.estats[self.estat], int(swapUsed))
         logger.info(missatge)
 
         # if self.estat != 'o':

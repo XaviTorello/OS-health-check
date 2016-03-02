@@ -16,6 +16,7 @@ parser.add_option('-p', '--pass', dest="password", help="password to login")
 parser.add_option('-c', '--cert', dest="cert", help="cert to login")
 parser.add_option('-D', '--debug', dest="debug", help="activate debug messages", action="store_true")
 parser.add_option('-I', '--info', dest="info", help="activate info messages", action="store_true")
+parser.add_option('-T', '--test', dest="test", help="launch all tests", action="store_true")
 
 options, args = parser.parse_args()
 
@@ -38,9 +39,17 @@ if options.debug:
     logging.basicConfig(level=logging.DEBUG)
 
 
+
 local = Connection(options.host, options.user, options.password, 22)
 
-#cpu = Check(local, ["disk", "swap", "cpu", "process_grep_count portal 4"])
+if options.test:
+    l=["disk", "swap", "cpu", "process_grep_count portal 1", "process_grep_count portal", "process_grep_count", "process_listener", "process_listener 22", "process_listener 22 1", "tcp_connections"]
+    control = Check(local, l )
+    local.close_connection()
+    exit(control.rc)
+
+
+#cpu = Check(local, )
 control = Check(local, [options.check], )
 
 local.close_connection()
