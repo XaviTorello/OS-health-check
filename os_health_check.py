@@ -96,16 +96,17 @@ class Check():
             count_expected = 1
 
         try:
-            tcp6_avoid = int(params[3])
+            tcp6_avoid = bool(params[3])
         except:
             logger.info("No tcp6_avoid received, setting to True to avoid review tcp6 listeners")
-            tcp6_avoid = True
+            tcp6_avoid = "True"
 
-        self.command="netstat -tan | grep LISTEN | grep {}".format(tcp_port)
+        self.command="/bin/netstat -tan | egrep -e 'LISTEN|ESCUCH' | grep {}".format(tcp_port)
 
-        if tcp6_avoid:
+        if tcp6_avoid == "True":
             self.command+=" | grep -v tcp6"
 
+	logger.info("Executing: '{}'".format(self.command))
         self.execute_check()
 
         count=0
@@ -115,6 +116,7 @@ class Check():
         self.rc=self.estats_rc['o']
 
         for linia in self.connection.last_command[2]:
+            logger.info(" - {}".format(linia))
             listeners.append(str(linia.split()[3]))
             count+=1
 
@@ -211,11 +213,11 @@ class Check():
         self.estat='o'
 
 
-        if float(avg5)>float(0.9):
+        if float(avg5)>float(0.95):
             self.estat='c'
             logger.info("- [{}] Load average is {} for the last 5min\n".format(self.estats[self.estat], avg5))
 
-        elif float(avg5)>float(0.7):
+        elif float(avg5)>float(0.8):
             self.estat='w'
             logger.info("- [{}] Load average is {} for the last 5min\n".format(self.estats[self.estat], avg5))
 
@@ -229,7 +231,7 @@ class Check():
 
 
     def check_disk (self, params=None):
-        self.command="df"
+        self.command="df -h"
         self.execute_check()
         #print self.connection.print_last_command()
         header=1
@@ -253,13 +255,13 @@ class Check():
             elif int(entrada[4])>=int(self.warning):
                 self.estat = 'w'
 
-            missatge="[{}] Disk {} is {}% used\n".format(self.estats[self.estat], entrada[0],entrada[4])
+            missatge="[{}] Disk {} is {}% used on {}. Available: {}\n".format(self.estats[self.estat], entrada[0],entrada[4], entrada[5], entrada[3])
 
             logger.info(missatge)
 
-            #if self.estat != 'o':
-            self.sortida+=missatge
-            self.rc=max(int(self.rc), int(self.estats_rc[self.estat]))
+            if self.estat != 'o':
+                self.sortida+=missatge
+                self.rc=max(int(self.rc), int(self.estats_rc[self.estat]))
 
 
 

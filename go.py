@@ -26,7 +26,7 @@ if not options.user:
     options.user="user"
 
 if not options.password:
-    options.password="password"
+    options.password="monitoringXX!"
 
 if not options.check:
     options.check = "process_listener 22 1"

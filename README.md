@@ -33,9 +33,9 @@ checkn status detail
 
 , where
 ```
- -h define the hostname/IP address to check
+ -H define the hostname/IP address to check
 
- -c the set of checks to be performed comma (,) separated (without spaces!)
+ -C the set of checks to be performed comma (,) separated (without spaces!)
     OPTIONS: cpu mem disk net
 
  -m set the metrics pair warning,critical to analyze the status of the tests comma (,) separated (without spaces!)
@@ -47,7 +47,7 @@ checkn status detail
  -D define a delay for the execution of **each** check
     //-D5 will wait 5secs between the execution of each check
 
- -C get the results from cache (last execution results)
+ -c get the results from cache (last execution results)
 ```
 
 
