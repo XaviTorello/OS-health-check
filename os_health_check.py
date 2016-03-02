@@ -13,7 +13,6 @@ class Connection ():
     client = paramiko.SSHClient()
     last_command = []
 
-
     def __init__(self, host, user, passwd, port=22):
         self.set_new_connection(host,user,passwd, port)
 
@@ -86,6 +85,60 @@ class Check():
 
     def execute_check(self):
         self.connection.launch_command(self.command)
+
+    def check_process_listener (self, params=None):
+        tcp_port = str(params[1])
+
+        try:
+            count_expected = int(params[2])
+        except:
+            logger.info("No expected count received, setting to 1")
+            count_expected = 1
+
+        try:
+            tcp6_avoid = bool(params[3])
+        except:
+            logger.info("No tcp6_avoid received, setting to True to avoid review tcp6 listeners")
+            tcp6_avoid = "True"
+
+        self.command="/bin/netstat -tan | egrep -e 'LISTEN|ESCUCH' | grep {}".format(tcp_port)
+
+        if tcp6_avoid == "True":
+            self.command+=" | grep -v tcp6"
+
+	logger.info("Executing: '{}'".format(self.command))
+        self.execute_check()
+
+        count=0
+        listeners=[]
+        self.estat='o'
+        self.sortida=''
+        self.rc=self.estats_rc['o']
+
+        for linia in self.connection.last_command[2]:
+            logger.info(" - {}".format(linia))
+            listeners.append(str(linia.split()[3]))
+            count+=1
+
+        def compare(x):
+            return {
+                count_expected: 'o',
+                0: 'c',
+            }.get(x,'u')
+
+        self.estat=compare(count)
+
+        if self.estat == 'u':  #si no es l'esperat o 0
+            if (count<count_expected):
+                self.estat='c'
+            else:
+                self.estat='w'
+
+        missatge = "[{}] There are {} listener for port '{}' ({}). Expected count: {}".format(self.estats[self.estat], count, tcp_port, listeners, count_expected)
+
+        self.rc=max(int(self.rc), int(self.estats_rc[self.estat]))
+        self.sortida+= missatge
+
 
 
     def check_process_grep_count (self, params=None):
@@ -160,11 +213,11 @@ class Check():
         self.estat='o'
 
 
-        if float(avg5)>float(0.9):
+        if float(avg5)>float(0.95):
             self.estat='c'
             logger.info("- [{}] Load average is {} for the last 5min\n".format(self.estats[self.estat], avg5))
 
-        elif float(avg5)>float(0.7):
+        elif float(avg5)>float(0.8):
             self.estat='w'
             logger.info("- [{}] Load average is {} for the last 5min\n".format(self.estats[self.estat], avg5))
 
@@ -178,7 +231,7 @@ class Check():
 
 
     def check_disk (self, params=None):
-        self.command="df"
+        self.command="df -h"
         self.execute_check()
         #print self.connection.print_last_command()
         header=1
@@ -202,13 +255,13 @@ class Check():
             elif int(entrada[4])>=int(self.warning):
                 self.estat = 'w'
 
-            missatge="[{}] Disk {} is {}% used\n".format(self.estats[self.estat], entrada[0],entrada[4])
+            missatge="[{}] Disk {} is {}% used on {}. Available: {}\n".format(self.estats[self.estat], entrada[0],entrada[4], entrada[5], entrada[3])
 
             logger.info(missatge)
 
-            #if self.estat != 'o':
-            self.sortida+=missatge
-            self.rc=max(int(self.rc), int(self.estats_rc[self.estat]))
+            if self.estat != 'o':
+                self.sortida+=missatge
+                self.rc=max(int(self.rc), int(self.estats_rc[self.estat]))
 
 
 
