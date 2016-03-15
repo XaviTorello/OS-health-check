@@ -322,8 +322,6 @@ class Check():
         self.sortida+= "[{}] Load average is {}, {}, {} [{} cpus] (threshold {}, per cpu {})".format(self.estats[self.estat], avg1, avg5, avg15, int(cpus), [x * cpus for x in critical_threshold], critical_threshold)
 
 
-<<<<<<< HEAD
-
     def check_erp_version (self, params=None):
         pathh = "/home/erp/src/erp/"
         self.command="/usr/bin/git -C " + pathh + " describe --tag"
@@ -356,8 +354,6 @@ class Check():
 
 
 
-=======
->>>>>>> origin/master
     def check_disk (self, params=None):
         self.command="df -h"
         self.execute_check()
@@ -435,11 +431,7 @@ class Check():
         elif swapUsed>=int(self.warning):
             self.estat = 'w'
 
-<<<<<<< HEAD
-        missatge="[{}] Swap is {}% used\n".format(self.estats[self.estat], swapUsed)
-=======
         missatge="[{}] Swap is {}% used".format(self.estats[self.estat], int(swapUsed))
->>>>>>> origin/master
         logger.info(missatge)
 
         # if self.estat != 'o':
