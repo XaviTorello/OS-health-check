@@ -225,12 +225,6 @@ class Check():
 
         self.estat='o'
 
-
-        avg5=15
-#    estats = {'w':'Warning', 'c':'Critical', 'o':'OK'}
-#    estats_rc = {'w':1, 'c':2, 'o':0}
-#    estat='o'
-
         def review_threshold(actuals, warn, crit, cpu):
             rc=0
 	    rc='o'
@@ -252,6 +246,37 @@ class Check():
 
 
 
+    def check_erp_version (self, params=None):
+        pathh = "/home/erp/src/erp/"
+        self.command="/usr/bin/git -C " + pathh + " describe --tag"
+        self.execute_check()
+        #print self.connection.print_last_command()
+        header=1
+        self.estat=self.estats_rc['o']
+        self.sortida=''
+        missatge=""
+        count = 0
+
+        self.estat='o'
+
+        for linia in self.connection.last_command[2]:
+            count += 1
+            entrada=linia.split()
+
+            self.estat='o'
+            missatge="[{}] ERP {} is at {} tag\n".format(self.estats[self.estat], pathh, entrada[0])
+
+            logger.info(missatge)
+
+        if count < 1:
+            self.estat='w'
+            missatge="[{}] Not found any ERP in {}\n".format(self.estats[self.estat], pathh)
+            logger.info(missatge)
+
+        self.sortida+=missatge
+        self.rc=self.estats_rc[self.estat]
+
+
 
     def check_disk (self, params=None):
         self.command="df -h"
@@ -261,6 +286,8 @@ class Check():
         self.estat=self.estats_rc['o']
         self.sortida=''
 
+        critical = "95"
+        warning = "85"
 
         for linia in self.connection.last_command[2]:
             if header:
@@ -273,9 +300,12 @@ class Check():
 
             self.estat='o'
 
-            if int(entrada[4])>=int(self.critical):
+            if int(entrada[4])>=int(critical):
                 self.estat = 'c'
-            elif int(entrada[4])>=int(self.warning):
+                if (entrada[0]).find("/")>-1:  #for smb mountpoints set warning instead of critical
+                    self.estat = 'w'
+
+            elif int(entrada[4])>=int(warning):
                 self.estat = 'w'
 
             missatge="[{}] Disk {} is {}% used on {}. Available: {}\n".format(self.estats[self.estat], entrada[0],entrada[4], entrada[5], entrada[3])
@@ -325,7 +355,7 @@ class Check():
         elif swapUsed>=int(self.warning):
             self.estat = 'w'
 
-        missatge="- [{}] Swap is {}% used\n".format(self.estats[self.estat], swapUsed)
+        missatge="[{}] Swap is {}% used\n".format(self.estats[self.estat], swapUsed)
         logger.info(missatge)
 
         # if self.estat != 'o':

@@ -26,7 +26,7 @@ if not options.user:
     options.user="user"
 
 if not options.password:
-    options.password="monitoringXX!"
+    options.password="pass"
 
 if not options.check:
     options.check = "process_listener 22 1"
@@ -37,10 +37,9 @@ if options.info:
 if options.debug:
     logging.basicConfig(level=logging.DEBUG)
 
-
 local = Connection(options.host, options.user, options.password, 22)
 
-#cpu = Check(local, ["disk", "swap", "cpu", "process_grep_count portal 4"])
+#cpu = Check(local, ["erp_version", "disk", "swap", "cpu", "process_grep_count portal 4"])
 control = Check(local, [options.check], )
 
 local.close_connection()
