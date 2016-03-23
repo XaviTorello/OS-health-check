@@ -364,6 +364,8 @@ class Check():
 
         critical = "95"
         warning = "85"
+        margin = 10   #10G margin
+
 
         for linia in self.connection.last_command[2]:
             if header:
@@ -389,6 +391,9 @@ class Check():
             logger.info(missatge)
 
             if self.estat != 'o':
+                # If not OK, review if the current available amount is > margin
+                if int(entrada[3][:-1])>margin:
+                    continue
                 self.sortida+=missatge
                 self.rc=max(int(self.rc), int(self.estats_rc[self.estat]))
 
