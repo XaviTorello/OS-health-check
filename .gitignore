@@ -7,5 +7,4 @@ test.py
 build/*
 *egg-info*
 setup.cfg
-go.py
 *.orig

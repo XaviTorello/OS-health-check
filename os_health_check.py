@@ -392,7 +392,7 @@ class Check():
 
             if self.estat != 'o':
                 # If not OK, review if the current available amount is > margin
-                if int(entrada[3][:-1])>margin:
+                if int(float(entrada[3][:-1]))>margin:
                     continue
                 self.sortida+=missatge
                 self.rc=max(int(self.rc), int(self.estats_rc[self.estat]))
